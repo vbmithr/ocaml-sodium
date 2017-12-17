@@ -501,6 +501,73 @@ module Scalar_mult = struct
     end)
 end
 
+module ECArith = struct
+  module C = C.ECArith
+  let primitive = C.primitive
+
+  type uniform = Bytes.t
+  type point = Bytes.t
+
+  let uniform_size = Size_t.to_int (C.uniformbytes ())
+  let point_size   = Size_t.to_int (C.bytes ())
+
+  let equal_uniform = Verify.equal_fn uniform_size
+  let equal_point = Verify.equal_fn point_size
+
+  let is_valid_point point =
+    let ret = Storage.Bytes.(C.is_valid_point (to_ptr point)) in
+    ret = 1
+
+  let from_uniform uniform =
+    let point = Bytes.create point_size in
+    let ret = Storage.Bytes.(C.from_uniform (to_ptr point) (to_ptr uniform)) in
+    if ret <> 1 then invalid_arg "ECArith.from_uniform" ;
+    point
+
+  let add_or_sub name f a b =
+    let sum = Bytes.create point_size in
+    let ret = Storage.Bytes.(C.add (to_ptr sum) (to_ptr a) (to_ptr b)) in
+    if ret <> 0 then
+      invalid_arg ("ECArith." ^ name ^ ": arguments are not valid points") ;
+    sum
+
+  let add = add_or_sub "add" C.add
+  let sub = add_or_sub "sub" C.sub
+
+  module type S = sig
+    type storage
+
+    val of_uniform  : uniform -> storage
+    val to_uniform  : storage -> uniform
+
+    val of_point    : point -> storage
+    val to_point    : storage -> point
+  end
+
+  module Make(T: Storage.S) = struct
+    type storage = T.t
+
+    let of_uniform str =
+      T.of_bytes str
+
+    let to_uniform str =
+      if T.length str <> uniform_size then
+        raise (Size_mismatch "ECArith.to_group_elt");
+      T.to_bytes str
+
+    let of_point str =
+      T.of_bytes str
+
+    let to_point str =
+      if T.length str <> point_size then
+        raise (Size_mismatch "ECArith.to_integer");
+      T.to_bytes str
+  end
+
+  module Bytes = Make(Storage.Bytes)
+  module Bigbytes = Make(Storage.Bigbytes)
+end
+
 module Password_hash = struct
   module Sodium = C
   module C = C.Password_hash

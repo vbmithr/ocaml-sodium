@@ -245,6 +245,69 @@ module Scalar_mult : sig
   module Ed25519 : module type of Curve25519
 end
 
+module ECArith : sig
+  type uniform
+  type point
+
+  (** Primitive used by this implementation ([curve25519]). *)
+  val primitive       : string
+
+  (** Size of uniforms, in bytes. *)
+  val uniform_size  : int
+
+  (** Size of points, in bytes. *)
+  val point_size    : int
+
+  (** [equal_uniform a b] checks [a] and [b] for equality in constant time. *)
+  val equal_uniform : uniform -> uniform -> bool
+
+  (** [equal_point a b] checks [a] and [b] for equality in constant time. *)
+  val equal_point   : point -> point -> bool
+
+  (** [is_valid_point p] function checks that [p] represents a point on
+      the edwards25519 curve, in canonical form, on the main subgroup,
+      and that the point doesn't have a small order. *)
+  val is_valid_point : point -> bool
+
+  (** [from_uniform r] maps a 32 bytes vector [r] (usually the output
+     of a hash function) to a point, and stores its compressed
+     representation into p. The point is guaranteed to be on the main
+     subgroup.
+
+      @raise [Invalid_argument] if [r] cannot be represented into a
+     point.
+  *)
+  val from_uniform : uniform -> point
+
+  val add : point -> point -> point
+  val sub : point -> point -> point
+
+  module type S = sig
+    type storage
+
+    (** [of_uniform r] converts [r] to {!storage}. The result is
+       {!uniform_size} bytes long. *)
+    val of_uniform  : uniform -> storage
+
+    (** [to_uniform s] converts [s] to a group_elt.
+
+        @raise Size_mismatch if [s] is not {!uniform_size} bytes long *)
+    val to_uniform  : storage -> uniform
+
+    (** [of_point p] converts [p] to {!storage}. The result
+        is {!point_size} bytes long. *)
+    val of_point    : point -> storage
+
+    (** [to_point s] converts [s] to a point.
+
+        @raise Size_mismatch if [s] is not {!point_size} bytes long *)
+    val to_point    : storage -> point
+  end
+
+  module Bytes : S with type storage = Bytes.t
+  module Bigbytes : S with type storage = bigbytes
+end
+
 module Sign : sig
   type 'a key
   type secret_key = secret key

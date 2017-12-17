@@ -311,4 +311,26 @@ module C(F: Cstubs.FOREIGN) = struct
     end
   end
 
+  module ECArith = struct
+    let primitive = "ed25519"
+    let prefix    = "crypto_core_"^primitive
+
+    let sz_query_type   = F.(void @-> returning size_t)
+    let bytes           = F.foreign (prefix^"_bytes") sz_query_type
+    let uniformbytes    = F.foreign (prefix^"_uniformbytes") sz_query_type
+
+    let is_valid_point  = F.(foreign (prefix^"_is_valid_point")
+                               (ocaml_bytes @-> returning int))
+
+    let from_uniform    = F.(foreign (prefix^"_from_uniform")
+                               (ocaml_bytes @-> ocaml_bytes @-> returning int))
+
+    let add             = F.(foreign (prefix^"_add")
+                               (ocaml_bytes @-> ocaml_bytes @-> ocaml_bytes @->
+                                returning int))
+
+    let sub             = F.(foreign (prefix^"_sub")
+                               (ocaml_bytes @-> ocaml_bytes @-> ocaml_bytes @->
+                                returning int))
+  end
 end
